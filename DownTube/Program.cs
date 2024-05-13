@@ -3,10 +3,10 @@ using YoutubeExplode;
 using YoutubeExplode.Common;
 using YoutubeExplode.Videos.Streams;
 
-var videoUrl = "https://www.youtube.com/playlist?list=PLPF4kKOvJ4B1y0sQOXHqMwVphI7SIpxXr";
+string? videoUrl = null;
 var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-var audioOnly = true;
-var isPlaylist = true;
+var audioOnly = false;
+var isPlaylist = false;
 
 for (var i = 0; i < args.Length; i++)
 {
