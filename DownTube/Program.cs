@@ -7,6 +7,7 @@ string? videoUrl = null;
 var filePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 var audioOnly = false;
 var isPlaylist = false;
+var ignoreSizeLimit = false;
 
 for (var i = 0; i < args.Length; i++)
 {
@@ -26,6 +27,9 @@ for (var i = 0; i < args.Length; i++)
         case "--playlist":
             isPlaylist = true;
             break;
+        case "--ignore-size-limit":
+            ignoreSizeLimit = true;
+            break;
     }
 }
 
@@ -35,9 +39,11 @@ if (videoUrl == null)
         
             Uso: dotnet run --url <URL_do_Vídeo> --path <Caminho_do_Arquivo> [--audio-only]
         
-            --url, -u       Especifica a URL do vídeo do YouTube que você deseja baixar.
-            --path, -p      Especifica o caminho onde o vídeo será salvo no seu sistema.
-            --audio-only    (Opcional) Baixa apenas o áudio do vídeo em MP3.
+            --url, -u           Especifica a URL do vídeo do YouTube que você deseja baixar.
+            --path, -p          Especifica o caminho onde o vídeo será salvo no seu sistema.
+            --audio-only        (Opcional) Baixa apenas o áudio do vídeo em MP3.
+            --playlist          (Opcional) Baixa todos os vídeos de uma playlist.
+            --ignore-size-limit (Opcional) Ignora o limite de tamanho de arquivo de 10 MB para músicas.
         
             Exemplo de uso:
             dotnet run --url 'URL_do_Vídeo' --path 'Caminho_do_Arquivo'
@@ -73,7 +79,7 @@ async Task DownloadPlaylist()
     var youtube = new YoutubeClient();
     var playlist = await youtube.Playlists.GetAsync(videoUrl);
     var videos = await youtube.Playlists.GetVideosAsync(videoUrl);
-    var dirPath = Path.Combine(filePath, playlist.Title.Replace('|', '-'));
+    var dirPath = Path.Combine(filePath, NormalizePath(playlist.Title));
     if (!Directory.Exists(dirPath))
     {
         Directory.CreateDirectory(dirPath);
@@ -90,7 +96,14 @@ async Task DownloadPlaylist()
                 .Where(s => s.Container == Container.Mp3 || s.Container == Container.Mp4)
                 .GetWithHighestBitrate();
 
-            filename = $"{video.Title}.{streamInfo.Container.Name}";
+            var streamSize = streamInfo.Size.MegaBytes;
+            if (streamSize > 10 && !ignoreSizeLimit)
+            {
+                Console.WriteLine($"O arquivo {video.Title} é muito grande para ser baixado. Ignorando...");
+                continue;
+            }
+
+            filename = NormalizePath($"{video.Title}.{streamInfo.Container.Name}");
             await youtube.Videos.Streams.DownloadAsync(streamInfo, Path.Combine(dirPath, filename));
             var inputFilePath = Path.Combine(dirPath, filename);
             var outputFilePath = Path.Combine(dirPath, $"{video.Title}.mp3");
@@ -104,11 +117,17 @@ async Task DownloadPlaylist()
                 .Where(s => s.Container == Container.Mp4)
                 .GetWithHighestVideoQuality();
 
-            filename = $"{video.Title}.{streamInfo.Container.Name}";
+            filename = NormalizePath($"{video.Title}.{streamInfo.Container.Name}");
             await youtube.Videos.Streams.DownloadAsync(streamInfo, Path.Combine(dirPath, filename));
             Console.WriteLine($"{filename} foi salvo com sucesso.");
         }
     }
+}
+
+string NormalizePath(string path)
+{
+    var invalidChars = Path.GetInvalidFileNameChars();
+    return string.Concat(path.Select(c => invalidChars.Contains(c) ? '-' : c));
 }
 
 async Task ConvertToMp3(string inputFilePath, string outputFilePath)
@@ -143,7 +162,7 @@ async Task DownloadVideo()
             .Where(s => s.Container == Container.Mp3 || s.Container == Container.Mp4)
             .GetWithHighestBitrate();
 
-        filename = $"{video.Title}.{streamInfo.Container.Name}";
+        filename = NormalizePath($"{video.Title}.{streamInfo.Container.Name}");
         await youtube.Videos.Streams.DownloadAsync(streamInfo, Path.Combine(filePath, filename));
         var inputFilePath = Path.Combine(filePath, filename);
         var outputFilePath = Path.Combine(filePath, filename);
@@ -156,7 +175,7 @@ async Task DownloadVideo()
             .Where(s => s.Container == Container.Mp4)
             .GetWithHighestVideoQuality();
 
-        filename = $"{video.Title}.{streamInfo.Container.Name}";
+        filename = NormalizePath($"{video.Title}.{streamInfo.Container.Name}");
         await youtube.Videos.Streams.DownloadAsync(streamInfo, Path.Combine(filePath, filename));
         Console.WriteLine($"{filename} foi salvo com sucesso.");
     }
