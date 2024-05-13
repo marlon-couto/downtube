@@ -103,13 +103,14 @@ async Task DownloadPlaylist()
                 continue;
             }
 
-            filename = NormalizePath($"{video.Title}.{streamInfo.Container.Name}");
+            var normalizedVideoTitle = NormalizePath(video.Title);
+            filename = NormalizePath($"{normalizedVideoTitle}.{streamInfo.Container.Name}");
             await youtube.Videos.Streams.DownloadAsync(streamInfo, Path.Combine(dirPath, filename));
             var inputFilePath = Path.Combine(dirPath, filename);
-            var outputFilePath = Path.Combine(dirPath, $"{video.Title}.mp3");
+            var outputFilePath = Path.Combine(dirPath, $"{normalizedVideoTitle}.mp3");
             await ConvertToMp3(inputFilePath, outputFilePath);
             File.Delete(Path.Combine(dirPath, filename));
-            Console.WriteLine($"{video.Title}.mp3 foi salvo com sucesso.");
+            Console.WriteLine($"{normalizedVideoTitle}.mp3 foi salvo com sucesso.");
         }
         else
         {
@@ -127,7 +128,12 @@ async Task DownloadPlaylist()
 string NormalizePath(string path)
 {
     var invalidChars = Path.GetInvalidFileNameChars();
-    return string.Concat(path.Select(c => invalidChars.Contains(c) ? '-' : c));
+    foreach (var invalidChar in invalidChars)
+    {
+        path = path.Replace(invalidChar, '-');
+    }
+
+    return path;
 }
 
 async Task ConvertToMp3(string inputFilePath, string outputFilePath)
