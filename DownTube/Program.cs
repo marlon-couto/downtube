@@ -112,10 +112,14 @@ async Task DownloadPlaylist()
             var normalizedVideoTitle = NormalizePath(video.Title);
             filename = NormalizePath($"{normalizedVideoTitle}.{streamInfo.Container.Name}");
             await youtube.Videos.Streams.DownloadAsync(streamInfo, Path.Combine(dirPath, filename));
-            var inputFilePath = Path.Combine(dirPath, filename);
-            var outputFilePath = Path.Combine(dirPath, $"{normalizedVideoTitle}.mp3");
-            await ConvertToMp3(inputFilePath, outputFilePath);
-            File.Delete(Path.Combine(dirPath, filename));
+            if (streamInfo.Container == Container.Mp4)
+            {
+                var inputFilePath = Path.Combine(dirPath, filename);
+                var outputFilePath = Path.Combine(dirPath, $"{normalizedVideoTitle}.mp3");
+                await ConvertToMp3(inputFilePath, outputFilePath);
+                File.Delete(Path.Combine(dirPath, filename));
+            }
+
             Console.WriteLine($"{normalizedVideoTitle}.mp3 foi salvo com sucesso.");
         }
         else
@@ -174,12 +178,25 @@ async Task DownloadVideo()
             .Where(s => s.Container == Container.Mp3 || s.Container == Container.Mp4)
             .GetWithHighestBitrate();
 
-        filename = NormalizePath($"{video.Title}.{streamInfo.Container.Name}");
+        var streamSize = streamInfo.Size.MegaBytes;
+        if (streamSize > 10 && !ignoreSizeLimit)
+        {
+            Console.WriteLine($"O arquivo {video.Title} é muito grande para ser baixado. Ignorando...");
+            return;
+        }
+
+        var normalizedVideoTitle = NormalizePath(video.Title);
+        filename = NormalizePath($"{normalizedVideoTitle}.{streamInfo.Container.Name}");
         await youtube.Videos.Streams.DownloadAsync(streamInfo, Path.Combine(filePath, filename));
-        var inputFilePath = Path.Combine(filePath, filename);
-        var outputFilePath = Path.Combine(filePath, filename);
-        await ConvertToMp3(inputFilePath, outputFilePath);
-        Console.WriteLine($"{video.Title}.mp3 foi salvo com sucesso.");
+        if (streamInfo.Container == Container.Mp4)
+        {
+            var inputFilePath = Path.Combine(filePath, filename);
+            var outputFilePath = Path.Combine(filePath, $"{normalizedVideoTitle}.mp3");
+            await ConvertToMp3(inputFilePath, outputFilePath);
+            File.Delete(Path.Combine(filePath, filename));
+        }
+
+        Console.WriteLine($"{normalizedVideoTitle}.mp3 foi salvo com sucesso.");
     }
     else
     {
