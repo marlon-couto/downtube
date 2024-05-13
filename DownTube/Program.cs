@@ -87,6 +87,12 @@ async Task DownloadPlaylist()
 
     foreach (var video in videos)
     {
+        if (File.Exists(Path.Combine(dirPath, NormalizePath($"{video.Title}.mp3"))))
+        {
+            Console.WriteLine($"{video.Title}.mp3 já foi baixado. Ignorando...");
+            continue;
+        }
+
         var streamManifest = await youtube.Videos.Streams.GetManifestAsync(video.Url);
         IStreamInfo streamInfo;
         string filename;
