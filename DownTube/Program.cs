@@ -30,6 +30,10 @@ for (var i = 0; i < args.Length; i++)
         case "--ignore-size-limit":
             ignoreSizeLimit = true;
             break;
+        case "--help":
+        case "-h":
+            videoUrl = null;
+            break;
     }
 }
 
