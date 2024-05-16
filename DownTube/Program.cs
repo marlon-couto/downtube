@@ -93,12 +93,6 @@ async Task DownloadPlaylist()
     for (var i = 0; i < videos.Count; i++)
     {
         var video = videos[i];
-        if (File.Exists(Path.Combine(dirPath, NormalizePath($"{video.Title}.mp3"))))
-        {
-            Console.WriteLine($"{video.Title}.mp3 já foi baixado. Ignorando...");
-            continue;
-        }
-
         var streamManifest = await youtube.Videos.Streams.GetManifestAsync(video.Url);
         if (audioOnly)
         {
@@ -150,8 +144,14 @@ async Task ConvertToMp3(string inputFilePath, string outputFilePath)
 async Task SaveConvertedAudioFile(StreamManifest streamManifest
     , IVideo video
     , YoutubeClient youtube
-    , string dirPath1)
+    , string dirPath)
 {
+    if (File.Exists(Path.Combine(dirPath, NormalizePath($"{video.Title}.mp3"))))
+    {
+        Console.WriteLine($"{video.Title}.mp3 já foi baixado. Ignorando...");
+        return;
+    }
+
     var streamInfo = streamManifest.GetAudioOnlyStreams()
         .Where(s => s.Container == Container.Mp3 || s.Container == Container.Mp4)
         .GetWithHighestBitrate();
@@ -165,13 +165,13 @@ async Task SaveConvertedAudioFile(StreamManifest streamManifest
 
     var normalizedVideoTitle = NormalizePath(video.Title);
     var filename = NormalizePath($"{normalizedVideoTitle}.{streamInfo.Container.Name}");
-    await youtube.Videos.Streams.DownloadAsync(streamInfo, Path.Combine(dirPath1, filename));
+    await youtube.Videos.Streams.DownloadAsync(streamInfo, Path.Combine(dirPath, filename));
     if (streamInfo.Container == Container.Mp4)
     {
-        var inputFilePath = Path.Combine(dirPath1, filename);
-        var outputFilePath = Path.Combine(dirPath1, $"{normalizedVideoTitle}.mp3");
+        var inputFilePath = Path.Combine(dirPath, filename);
+        var outputFilePath = Path.Combine(dirPath, $"{normalizedVideoTitle}.mp3");
         await ConvertToMp3(inputFilePath, outputFilePath);
-        File.Delete(Path.Combine(dirPath1, filename));
+        File.Delete(Path.Combine(dirPath, filename));
     }
 
     Console.WriteLine($"{normalizedVideoTitle}.mp3 foi salvo com sucesso.");
@@ -193,6 +193,12 @@ async Task SaveVideoFile(StreamManifest streamManifest
     , YoutubeClient youtube
     , string dirPath)
 {
+    if (File.Exists(Path.Combine(dirPath, NormalizePath($"{video.Title}.mp4"))))
+    {
+        Console.WriteLine($"{video.Title}.mp4 já foi baixado. Ignorando...");
+        return;
+    }
+
     var streamInfo = streamManifest.GetMuxedStreams()
         .Where(s => s.Container == Container.Mp4)
         .GetWithHighestVideoQuality();
