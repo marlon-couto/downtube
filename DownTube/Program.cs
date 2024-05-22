@@ -133,7 +133,12 @@ catch (ExistingFileException e)
 }
 catch (Exception e)
 {
-    Console.WriteLine($"Ocorreu um erro ao baixar o vídeo: {e.Message}");
+    Console.WriteLine($"Ocorreu um erro ao baixar o vídeo: {e.Message}.");
+
+#if DEBUG
+    Console.WriteLine(e.StackTrace);
+#endif
+
     return;
 }
 
@@ -153,7 +158,7 @@ async Task DownloadPlaylist()
         .Select(v => new VideoInfo { Title = NormalizeFilenameOrPath(v.Title), Url = v.Url })
         .ToList();
 
-    foreach (var video in videos.ToList().Where(video => IsExistingFile(video.Title, outputPath)))
+    foreach (var video in videos.ToList().Where(v => IsExistingFile(v.Title, outputPath)))
     {
         Console.WriteLine($"O arquivo {video.Title} já existe. Ignorando...");
         videos.Remove(video);
@@ -255,8 +260,7 @@ async Task SaveVideoFile(StreamManifest streamManifest, VideoInfo video)
 
 string NormalizeFilenameOrPath(string str)
 {
-    str = str.ToLower();
-    str = str.Normalize(NormalizationForm.FormD);
+    str = str.ToLower().Normalize(NormalizationForm.FormD);
     var sb = new StringBuilder();
     foreach (var c in str)
     {
@@ -275,9 +279,8 @@ string NormalizeFilenameOrPath(string str)
         sb.Append(currentChar);
     }
 
-    str = sb.ToString().Normalize(NormalizationForm.FormC);
-    str = str.Trim();
-    str = WhitespacesReplacementRegex().Replace(str, "_");
+    str = sb.ToString().Normalize(NormalizationForm.FormC).Trim();
+    str = WhitespacesRegex().Replace(str, "_");
     return str;
 }
 
@@ -298,5 +301,5 @@ internal class ExistingFileException(string message) : Exception(message);
 internal partial class Program
 {
     [GeneratedRegex(@"\s+")]
-    private static partial Regex WhitespacesReplacementRegex();
+    private static partial Regex WhitespacesRegex();
 }
