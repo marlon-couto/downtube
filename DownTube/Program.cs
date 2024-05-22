@@ -1,11 +1,46 @@
 ﻿using System.Diagnostics;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
 using YoutubeExplode;
 using YoutubeExplode.Common;
 using YoutubeExplode.Videos.Streams;
 
 var youtube = new YoutubeClient();
-var invalidFileChars = Path.GetInvalidFileNameChars();
-var invalidPathChars = Path.GetInvalidPathChars();
+var invalidChars = new Dictionary<char, char>
+{
+    ['<'] = '('
+    , ['>'] = ')'
+    , [':'] = '-'
+    , ['\\'] = '-'
+    , ['/'] = '-'
+    , ['|'] = '-'
+    , ['?'] = ' '
+    , ['*'] = ' '
+    , ['"'] = ' '
+    , ['\''] = ' '
+    , ['['] = '('
+    , [']'] = ')'
+    , ['@'] = '-'
+    , ['#'] = '-'
+    , ['+'] = ' '
+    , [','] = ' '
+    , ['.'] = ' '
+    , ['\r'] = ' '
+    , ['\n'] = ' '
+    , ['\t'] = ' '
+    , ['\0'] = ' '
+    , ['%'] = ' '
+    , ['&'] = 'e'
+    , ['{'] = '('
+    , ['}'] = ')'
+    , ['$'] = 's'
+    , ['!'] = ' '
+    , ['`'] = ' '
+    , ['='] = '-'
+};
+
 var outputPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
 var ignoreSizeLimit = false;
 var isPlaylist = false;
@@ -46,11 +81,12 @@ for (var i = 0; i < args.Length; i++)
     }
 }
 
+var downTubeCmd = RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ? "DownTube.exe" : "DownTube";
 if (videoUrl == null)
 {
-    Console.WriteLine("""
+    Console.WriteLine($"""
         
-            Uso: DownTube.exe --url <URL_DO_VÍDEO> --output <CAMINHO_DO_ARQUIVO> [--audio-only]
+            Uso: {downTubeCmd} --url <URL_DO_VÍDEO> --output <CAMINHO_DO_ARQUIVO> [--audio-only]
         
             --help, -h          Exibe a mensagem de ajuda.
             --url, -u           Especifica a URL do vídeo do YouTube que você deseja baixar.
@@ -60,8 +96,8 @@ if (videoUrl == null)
             --ignore-size-limit (Opcional) Ignora o limite de tamanho de vídeo de 15 MB.
         
             Exemplo de uso:
-            DownTube.exe --url 'URL_DO_VÍDEO' --output 'CAMINHO_DO_ARQUIVO'
-            DownTube.exe --url 'URL_DO_VÍDEO' --output 'CAMINHO_DO_ARQUIVO' --audio-only --playlist
+            {downTubeCmd} --url 'URL_DO_VÍDEO' --output 'CAMINHO_DO_ARQUIVO'
+            {downTubeCmd} --url 'URL_DO_VÍDEO' --output 'CAMINHO_DO_ARQUIVO' --audio-only --playlist
             
         """);
 
@@ -74,7 +110,7 @@ if (!Directory.Exists(outputPath))
     return;
 }
 
-Console.WriteLine("Iniciando download. Aguarde...");
+Console.WriteLine("Iniciando programa. Aguarde...");
 try
 {
     if (isPlaylist)
@@ -102,7 +138,7 @@ return;
 async Task DownloadPlaylist()
 {
     var playlist = await youtube.Playlists.GetAsync(videoUrl);
-    outputPath = Path.Combine(outputPath, NormalizeFilenameOrPath(playlist.Title, isPath: true));
+    outputPath = Path.Combine(outputPath, NormalizeFilenameOrPath(playlist.Title));
     if (!Directory.Exists(outputPath))
     {
         Directory.CreateDirectory(outputPath);
@@ -217,41 +253,30 @@ async Task SaveVideoFile(StreamManifest streamManifest, VideoInfo video)
     Console.WriteLine($"{filename} foi salvo com sucesso.");
 }
 
-string NormalizeFilenameOrPath(string path, bool isPath = false)
+string NormalizeFilenameOrPath(string str)
 {
-    var invalidChars = isPath ? invalidPathChars : invalidFileChars;
-    foreach (var invalidChar in invalidChars)
+    str = str.ToLower().Trim();
+    str = WhitespacesReplacementRegex().Replace(str, "_");
+    str = str.Normalize(NormalizationForm.FormD);
+    var sb = new StringBuilder();
+    foreach (var c in str)
     {
-        switch (invalidChar)
+        var currentChar = c;
+        var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(currentChar);
+        if (unicodeCategory == UnicodeCategory.NonSpacingMark)
         {
-            case '<' or '\u0017':
-                path = path.Replace(invalidChar, '(');
-                break;
-            case '>' or '\u0019':
-                path = path.Replace(invalidChar, ')');
-                break;
-            case '|' or '\u0005' or '\u0006' or ':' or '\\' or '/' or '\u001D' or '\u0007' or '\u000A':
-                path = path.Replace(invalidChar, '-');
-                break;
-            case '\u0013':
-                path = path.Replace(invalidChar, '!');
-                break;
-            case '\u0014':
-                path = path.Replace(invalidChar, '$');
-                break;
-            case '\u0016':
-                path = path.Replace(invalidChar, '&');
-                break;
-            case '*':
-                path = path.Replace(invalidChar, '+');
-                break;
-            default:
-                path = path.Remove(invalidChar);
-                break;
+            continue;
         }
+
+        if (invalidChars.ContainsKey(currentChar))
+        {
+            currentChar = invalidChars[c];
+        }
+
+        sb.Append(currentChar);
     }
 
-    return path;
+    return sb.ToString().Normalize(NormalizationForm.FormC);
 }
 
 bool IsExistingFile(string videoTitle, string path)
@@ -267,3 +292,9 @@ internal record VideoInfo
 }
 
 internal class ExistingFileException(string message) : Exception(message);
+
+internal partial class Program
+{
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespacesReplacementRegex();
+}
