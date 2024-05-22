@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using NAudio.Lame;
+using NAudio.Wave;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -204,21 +205,9 @@ async Task DownloadVideo()
 
 async Task ConvertToMp3(string inputFile, string outputFile)
 {
-    const string ffmpegPath
-        = @"C:\Users\couto\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-7.0-full_build\bin\ffmpeg.exe";
-
-    var args = $"-i \"{inputFile}\" -vn -ar 44100 -ac 2 -b:a 192k \"{outputFile}\"";
-    var processStartInfo = new ProcessStartInfo
-    {
-        FileName = ffmpegPath
-        , Arguments = args
-        , UseShellExecute = false
-        , RedirectStandardOutput = true
-        , CreateNoWindow = true
-    };
-
-    using var process = Process.Start(processStartInfo);
-    await process?.WaitForExitAsync()!;
+    await using var reader = new AudioFileReader(inputFile);
+    await using var writer = new LameMP3FileWriter(outputFile, reader.WaveFormat, LAMEPreset.VBR_100);
+    await reader.CopyToAsync(writer);
 }
 
 async Task SaveConvertedAudioFile(StreamManifest streamManifest, VideoInfo video)
@@ -294,8 +283,8 @@ bool IsExistingFile(string videoTitle, string path)
 
 internal record VideoInfo
 {
-    public string Title { get; set; } = null!;
-    public string Url { get; set; } = null!;
+    public string Title { get; init; } = null!;
+    public string Url { get; init; } = null!;
 }
 
 internal class ExistingFileException(string message) : Exception(message);
