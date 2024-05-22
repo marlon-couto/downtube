@@ -133,7 +133,7 @@ catch (ExistingFileException e)
 }
 catch (Exception e)
 {
-    Console.WriteLine($"Ocorreu um erro ao baixar o vídeo: {e.Message}.");
+    Console.WriteLine($"Ocorreu um erro ao baixar o vídeo: {e.Message}");
     return;
 }
 
@@ -229,8 +229,14 @@ async Task SaveConvertedAudioFile(StreamManifest streamManifest, VideoInfo video
     {
         var inputFilePath = Path.Combine(outputPath, filename);
         var outputFilePath = Path.Combine(outputPath, $"{video.Title}.mp3");
-        await ConvertToMp3(inputFilePath, outputFilePath);
-        File.Delete(Path.Combine(outputPath, filename));
+        try
+        {
+            await ConvertToMp3(inputFilePath, outputFilePath);
+        }
+        finally
+        {
+            File.Delete(Path.Combine(outputPath, filename));
+        }
     }
 
     Console.WriteLine($"{video.Title}.mp3 foi salvo com sucesso.");
