@@ -10,20 +10,20 @@ using YoutubeExplode.Videos.Streams;
 var youtube = new YoutubeClient();
 var invalidChars = new Dictionary<char, char>
 {
-    ['<'] = '('
-    , ['>'] = ')'
-    , [':'] = '-'
-    , ['\\'] = '-'
-    , ['/'] = '-'
-    , ['|'] = '-'
+    ['<'] = ' '
+    , ['>'] = ' '
+    , [':'] = ' '
+    , ['\\'] = ' '
+    , ['/'] = ' '
+    , ['|'] = ' '
     , ['?'] = ' '
     , ['*'] = ' '
     , ['"'] = ' '
     , ['\''] = ' '
-    , ['['] = '('
-    , [']'] = ')'
-    , ['@'] = '-'
-    , ['#'] = '-'
+    , ['['] = ' '
+    , [']'] = ' '
+    , ['@'] = ' '
+    , ['#'] = ' '
     , ['+'] = ' '
     , [','] = ' '
     , ['.'] = ' '
@@ -33,12 +33,15 @@ var invalidChars = new Dictionary<char, char>
     , ['\0'] = ' '
     , ['%'] = ' '
     , ['&'] = 'e'
-    , ['{'] = '('
-    , ['}'] = ')'
+    , ['{'] = ' '
+    , ['}'] = ' '
     , ['$'] = 's'
     , ['!'] = ' '
     , ['`'] = ' '
-    , ['='] = '-'
+    , ['='] = ' '
+    , ['('] = ' '
+    , [')'] = ' '
+    , ['-'] = ' '
 };
 
 var outputPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
@@ -139,6 +142,7 @@ async Task DownloadPlaylist()
 {
     var playlist = await youtube.Playlists.GetAsync(videoUrl);
     outputPath = Path.Combine(outputPath, NormalizeFilenameOrPath(playlist.Title));
+    Console.WriteLine($"Os vídeos serão salvos em {outputPath}.");
     if (!Directory.Exists(outputPath))
     {
         Directory.CreateDirectory(outputPath);
@@ -187,6 +191,7 @@ async Task DownloadVideo()
         throw new ExistingFileException($"O arquivo {videoInfo.Title} já existe. Nada a fazer.");
     }
 
+    Console.WriteLine($"O vídeo será salvo em {outputPath}.");
     if (audioOnly)
     {
         await SaveConvertedAudioFile(streamManifest, videoInfo);
@@ -255,8 +260,7 @@ async Task SaveVideoFile(StreamManifest streamManifest, VideoInfo video)
 
 string NormalizeFilenameOrPath(string str)
 {
-    str = str.ToLower().Trim();
-    str = WhitespacesReplacementRegex().Replace(str, "_");
+    str = str.ToLower();
     str = str.Normalize(NormalizationForm.FormD);
     var sb = new StringBuilder();
     foreach (var c in str)
@@ -276,7 +280,10 @@ string NormalizeFilenameOrPath(string str)
         sb.Append(currentChar);
     }
 
-    return sb.ToString().Normalize(NormalizationForm.FormC);
+    str = sb.ToString().Normalize(NormalizationForm.FormC);
+    str = str.Trim();
+    str = WhitespacesReplacementRegex().Replace(str, "_");
+    return str;
 }
 
 bool IsExistingFile(string videoTitle, string path)
