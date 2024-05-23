@@ -119,11 +119,11 @@ try
 {
     if (isPlaylist)
     {
-        await DownloadPlaylist();
+        await DownloadPlaylistAsync();
     }
     else
     {
-        await DownloadVideo();
+        await DownloadVideoAsync();
     }
 }
 catch (ExistingFileException e)
@@ -144,7 +144,7 @@ catch (Exception e)
 
 return;
 
-async Task DownloadPlaylist()
+async Task DownloadPlaylistAsync()
 {
     var playlist = await youtube.Playlists.GetAsync(videoUrl);
     outputPath = Path.Combine(outputPath, NormalizeFilenameOrPath(playlist.Title));
@@ -175,18 +175,18 @@ async Task DownloadPlaylist()
         var streamManifest = await youtube.Videos.Streams.GetManifestAsync(video.Url);
         if (audioOnly)
         {
-            await SaveConvertedAudioFile(streamManifest, video);
+            await SaveConvertedAudioFileAsync(streamManifest, video);
         }
         else
         {
-            await SaveVideoFile(streamManifest, video);
+            await SaveVideoFileAsync(streamManifest, video);
         }
 
         Console.WriteLine($"[{i + 1}/{videos.Count}]");
     }
 }
 
-async Task DownloadVideo()
+async Task DownloadVideoAsync()
 {
     var streamManifest = await youtube.Videos.Streams.GetManifestAsync(videoUrl);
     var video = await youtube.Videos.GetAsync(videoUrl);
@@ -200,22 +200,22 @@ async Task DownloadVideo()
     Console.WriteLine($"O vídeo será salvo em {outputPath}.");
     if (audioOnly)
     {
-        await SaveConvertedAudioFile(streamManifest, videoInfo);
+        await SaveConvertedAudioFileAsync(streamManifest, videoInfo);
     }
     else
     {
-        await SaveVideoFile(streamManifest, videoInfo);
+        await SaveVideoFileAsync(streamManifest, videoInfo);
     }
 }
 
-async Task ConvertToMp3(string inputFile, string outputFile)
+async Task ConvertToMp3Async(string inputFile, string outputFile)
 {
     await using var reader = new AudioFileReader(inputFile);
     await using var writer = new LameMP3FileWriter(outputFile, reader.WaveFormat, LAMEPreset.VBR_100);
     await reader.CopyToAsync(writer);
 }
 
-async Task SaveConvertedAudioFile(StreamManifest streamManifest, VideoInfo video)
+async Task SaveConvertedAudioFileAsync(StreamManifest streamManifest, VideoInfo video)
 {
     var streamInfo = streamManifest.GetAudioOnlyStreams()
         .Where(s => s.Container == Container.Mp3 || s.Container == Container.Mp4)
@@ -236,7 +236,7 @@ async Task SaveConvertedAudioFile(StreamManifest streamManifest, VideoInfo video
         var outputFilePath = Path.Combine(outputPath, $"{video.Title}.mp3");
         try
         {
-            await ConvertToMp3(inputFilePath, outputFilePath);
+            await ConvertToMp3Async(inputFilePath, outputFilePath);
         }
         finally
         {
@@ -247,7 +247,7 @@ async Task SaveConvertedAudioFile(StreamManifest streamManifest, VideoInfo video
     Console.WriteLine($"{video.Title}.mp3 foi salvo com sucesso.");
 }
 
-async Task SaveVideoFile(StreamManifest streamManifest, VideoInfo video)
+async Task SaveVideoFileAsync(StreamManifest streamManifest, VideoInfo video)
 {
     var streamInfo = streamManifest.GetMuxedStreams()
         .Where(s => s.Container == Container.Mp4)
