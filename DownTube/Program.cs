@@ -8,7 +8,6 @@ using YoutubeExplode;
 using YoutubeExplode.Common;
 using YoutubeExplode.Videos.Streams;
 
-var youtube = new YoutubeClient();
 var invalidChars = new Dictionary<char, char>
 {
     ['<'] = ' '
@@ -45,16 +44,23 @@ var invalidChars = new Dictionary<char, char>
     , ['-'] = ' '
 };
 
-var outputPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-var ignoreSizeLimit = false;
-var isPlaylist = false;
-var audioOnly = false;
+var youtube = new YoutubeClient();
+var homeDir = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+// ReSharper disable RedundantAssignment
 string? videoUrl = null;
+var outputPath = Path.Combine(homeDir, "Downloads");
+var audioOnly = false;
+var isPlaylist = false;
+var ignoreSizeLimit = false;
+// ReSharper restore RedundantAssignment
 
 #if DEBUG
-isPlaylist = true;
-audioOnly = true;
 videoUrl = "https://youtube.com/playlist?list=PLTRU2u_bXJoqnDRqh6FPdrs2T432lpXyM&si=I-YC3D89fkDDxWIf";
+outputPath = Path.Combine(homeDir, "Music");
+audioOnly = true;
+isPlaylist = true;
+ignoreSizeLimit = false;
 #endif
 
 for (var i = 0; i < args.Length; i++)
@@ -271,9 +277,9 @@ string NormalizeFilenameOrPath(string str)
             continue;
         }
 
-        if (invalidChars.ContainsKey(currentChar))
+        if (invalidChars.TryGetValue(currentChar, out var replacement))
         {
-            currentChar = invalidChars[c];
+            currentChar = replacement;
         }
 
         sb.Append(currentChar);
