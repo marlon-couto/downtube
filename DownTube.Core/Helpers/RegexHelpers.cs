@@ -7,6 +7,6 @@ public static partial class RegexHelpers
     [GeneratedRegex(@"\s+")]
     public static partial Regex MatchWhitespaces();
 
-    [GeneratedRegex(@"\p{Cs}")]
-    public static partial Regex MatchEmojis();
+    [GeneratedRegex("_{2,}")]
+    public static partial Regex MatchTwoOrMoreUnderscores();
 }

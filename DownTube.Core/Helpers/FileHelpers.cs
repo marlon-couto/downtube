@@ -5,41 +5,39 @@ namespace DownTube.Core.Helpers;
 
 public static class FileHelpers
 {
-    private static readonly Dictionary<char, char> InvalidCharsDict = new InvalidChars().Dict;
-
     public static string NormalizeFilenameOrPath(string str)
     {
+        var validChar = new Func<char, bool>(c => c is >= 'a' and <= 'z' or >= '0' and <= '9' or '_');
+        if (str.All(c => validChar(c)))
+        {
+            return str;
+        }
+
         str = str.ToLower().Normalize(NormalizationForm.FormD);
         var sb = new StringBuilder();
-        foreach (var c in str)
+        foreach (var c in from c in str
+                 let unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(c)
+                 where unicodeCategory != UnicodeCategory.NonSpacingMark
+                 select c)
         {
-            var currentChar = c;
-            var unicodeCategory = CharUnicodeInfo.GetUnicodeCategory(currentChar);
-            if (unicodeCategory == UnicodeCategory.NonSpacingMark)
+            if (validChar(c))
             {
-                continue;
+                sb.Append(c);
             }
-
-            if (InvalidCharsDict.TryGetValue(currentChar, out var replacement))
-            {
-                currentChar = replacement;
-            }
-
-            sb.Append(currentChar);
         }
 
         str = sb.ToString().Normalize(NormalizationForm.FormC).Trim();
-        str = RegexHelpers.MatchWhitespaces().Replace(str, "_");
-        str = RegexHelpers.MatchEmojis().Replace(str, string.Empty);
         if (str.Length > 100)
         {
             str = str[..100];
         }
 
+        str = RegexHelpers.MatchWhitespaces().Replace(str, "_");
+        str = RegexHelpers.MatchTwoOrMoreUnderscores().Replace(str, "_");
         if (str.EndsWith('_'))
         {
             str = str.TrimEnd('_');
-        }       
+        }
 
         return str;
     }
