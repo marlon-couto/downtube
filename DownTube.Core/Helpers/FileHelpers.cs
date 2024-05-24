@@ -24,12 +24,33 @@ public static class FileHelpers
             {
                 sb.Append(c);
             }
+            else
+            {
+                switch (c)
+                {
+                    case '-':
+                        sb.Append('_');
+                        break;
+                    case '@':
+                        sb.Append('a');
+                        break;
+                    case '$':
+                        sb.Append('s');
+                        break;
+                    case '&':
+                        sb.Append('e');
+                        break;
+                    default:
+                        sb.Append(' ');
+                        break;
+                }
+            }
         }
 
         str = sb.ToString().Normalize(NormalizationForm.FormC).Trim();
-        if (str.Length > 100)
+        if (str.Length > 50)
         {
-            str = str[..100];
+            str = str[..50];
         }
 
         str = RegexHelpers.MatchWhitespaces().Replace(str, "_");
